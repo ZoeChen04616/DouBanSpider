@@ -1,17 +1,12 @@
 #-*- coding: UTF-8 -*-
-
-import sys
+import codecs
+import re
 import time
-import urllib
-import urllib2
-import requests
+import urllib.parse
+import urllib.request
 import numpy as np
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
-
-reload(sys)
-sys.setdefaultencoding('utf8')
-
 
 
 #Some User Agents
@@ -27,15 +22,15 @@ def book_spider(book_tag):
     
     while(1):
         #url='http://www.douban.com/tag/%E5%B0%8F%E8%AF%B4/book?start=0' # For Test
-        url='http://www.douban.com/tag/'+urllib.quote(book_tag)+'/book?start='+str(page_num*15)
+        url='http://www.douban.com/tag/'+urllib.parse.quote(book_tag)+'/book?start='+str(page_num*15)
         time.sleep(np.random.rand()*5)
         
         #Last Version
         try:
-            req = urllib2.Request(url, headers=hds[page_num%len(hds)])
-            source_code = urllib2.urlopen(req).read()
+            req = urllib.request.Request(url, headers=hds[page_num%len(hds)])
+            source_code = urllib.request.urlopen(req).read()
             plain_text=str(source_code)   
-        except (urllib2.HTTPError, urllib2.URLError) as e:
+        except (urllib.request.HTTPError, urllib.request.URLError) as e:
             print (e)
             continue
   
@@ -43,7 +38,7 @@ def book_spider(book_tag):
         #source_code = requests.get(url) 
         #plain_text = source_code.text  
         
-        soup = BeautifulSoup(plain_text)
+        soup = BeautifulSoup(plain_text, features="lxml")
         list_soup = soup.find('div', {'class': 'mod book-list'})
         
         try_times+=1;
@@ -78,21 +73,28 @@ def book_spider(book_tag):
                 people_num ='0'
             
             book_list.append([title,rating,people_num,author_info,pub_info])
+
+            title_output = codecs.escape_decode(title)[0].decode()
+            rating_output = codecs.escape_decode(rating)[0].decode()
+            people_num_output = codecs.escape_decode(people_num)[0].decode()
+            author_info_output = codecs.escape_decode(author_info)[0].decode()
+            pub_info_output = codecs.escape_decode(pub_info)[0].decode()
+            print(title_output,rating_output,people_num_output,author_info_output,pub_info_output)
             try_times=0 #set 0 when got valid information
         page_num+=1
-        print 'Downloading Information From Page %d' % page_num
+        print ('Downloading Information From Page %d', page_num)
     return book_list
 
 
 def get_people_num(url):
     #url='http://book.douban.com/subject/6082808/?from=tag_all' # For Test
     try:
-        req = urllib2.Request(url, headers=hds[np.random.randint(0,len(hds))])
-        source_code = urllib2.urlopen(req).read()
+        req = urllib.request.Request(url, headers=hds[np.random.randint(0,len(hds))])
+        source_code = urllib.request.urlopen(req).read()
         plain_text=str(source_code)   
-    except (urllib2.HTTPError, urllib2.URLError), e:
-        print e
-    soup = BeautifulSoup(plain_text)
+    except (urllib.request.HTTPError, urllib.request.URLError) as e:
+        print (e)
+    soup = BeautifulSoup(plain_text, features="lxml")
     people_num=soup.find('div',{'class':'rating_sum'}).findAll('span')[1].string.strip()
     return people_num
 
@@ -139,5 +141,5 @@ if __name__=='__main__':
     #book_tag_lists = ['科幻','思维','金融']
     book_tag_lists = ['个人管理','时间管理','投资','文化','宗教']
     book_lists=do_spider(book_tag_lists)
-    print_book_lists_excel(book_lists,book_tag_lists)
+    # print_book_lists_excel(book_lists,book_tag_lists)
     
